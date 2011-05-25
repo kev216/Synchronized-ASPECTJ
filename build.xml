@@ -1,0 +1,180 @@
+
+<!-- A "project" describes a set of targets that may be requested
+     when Ant is executed.  The "default" attribute defines the
+     target which is executed if no specific target is requested,
+     and the "basedir" attribute defines the current working directory
+     from which Ant executes the requested task.  This is normally
+     set to the current working directory.
+-->
+
+<project name="Hello" default="all" basedir=".">
+
+  <property environment="myenv"/>
+
+  <property file="build.properties"/>
+
+<!--
+	Global definitions
+-->
+
+  <property name="aspectj.home"		value="${myenv.ASPECTJ_HOME}"/>
+  
+  <property name="src.dir"      	value="src"/>
+  <property name="build.dir" 		value="build"/>
+  <property name="classes.dir" 		value="${build.dir}/classes"/>
+  <property name="build.lib.dir" 	value="${build.dir}/lib"/>
+  <property name="aspects.dir"  	value="aspects"/>
+  <property name="lib.dir" 			value="lib"/>
+  <property name="config.dir" 		value="config"/>
+  <property name="main.prog" 		value="test.SimpleAccountTest"/>
+  <property name="app.jar" 			value="${build.lib.dir}/BankingAppli.jar"/>
+  <property name="app_aj.jar" 		value="${build.lib.dir}/BankingAppli_aj.jar"/>
+  <property name="app_aspects.jar" 	value="${build.lib.dir}/BankingAspects.jar"/>
+  
+<!--  ==================== Compilation Control Options ==================== -->
+  <property name="compile.debug"       value="true"/>
+  <property name="compile.deprecation" value="false"/>
+  <property name="compile.optimize"    value="true"/>
+
+<!-- ==================== Compilation Classpath =========================== -->
+<!--
+  Rather than relying on the CLASSPATH environment variable, Ant includes
+  features that makes it easy to dynamically construct the classpath you
+  need for each compilation.
+-->
+  <path id="compile.classpath">
+    <pathelement location="${build.dir}"/>
+  </path>
+
+<!-- ==================== All Target ====================================== -->
+  <target name="all" depends="clean,compile,doc,run"
+   description="Clean build directory, then compile and run"/>
+
+<!-- ==================== Clean Target ==================================== -->
+  <target name="clean"
+   description="Delete old build directory">
+    <delete dir="${build.dir}"/>
+  </target>
+
+<!-- ==================== Compile Target ================================== -->
+<!--
+  The "compile" target transforms source files (from your "src" directory)
+  into object files in the appropriate location in the build directory.
+-->
+
+  <target name="compile" 
+   description="Compile Java sources">
+
+    <!-- Compile Java classes as necessary -->
+    <mkdir    dir="${build.dir}"/>
+    <mkdir    dir="${classes.dir}"/>
+    <mkdir    dir="${build.lib.dir}"/>
+    <javac srcdir="${src.dir}"
+          destdir="${classes.dir}"
+            debug="${compile.debug}"
+      deprecation="${compile.deprecation}"
+         optimize="${compile.optimize}">
+        <!--
+        <classpath refid="compile.classpath"/>
+        -->
+      <classpath>
+        <pathelement location="${lib.dir}/log4j.jar"/>
+      </classpath>
+    </javac>
+   <jar jarfile="${app.jar}"
+         basedir="${classes.dir}"/>
+  </target>
+
+<!-- ==================== Run Target ================================== -->
+<!--
+  The "run" runs the main Java program.
+-->
+
+  <target name="run" depends="compile"
+   description="Run the main program">
+     <java fork="true"
+		  classname="${main.prog}">
+      <classpath>
+        <pathelement location="${app.jar}"/>
+        <pathelement location="${lib.dir}/log4j.jar"/>
+        <pathelement path="${config.dir}"/>
+      </classpath>
+	</java>
+  </target>
+
+<!-- ==================== Javadoc Target ================================== -->
+<!--
+  The "doc" generates the code documentation using the javadoc tool.
+-->
+
+  <target name="doc" 
+   description="Generates the code documentation using the javadoc tool">
+     <delete   dir="docs"/>
+     <mkdir    dir="docs"/>
+     <javadoc packagenames="banking,test"
+     		sourcepath="src"
+     		destdir="docs/api"
+     		author="true"
+     		version="true"
+     		use="true"
+     		private="true"
+     		windowtitle="Basic Banking Account API">
+     	<doctitle><![CDATA[<h1>Basic Banking Account API</h1>]]></doctitle>
+     	<bottom><![CDATA[<i>University Grenoble 1 (France) - Department of Computer Science <br>Master M1 - Adaptable Middleware - AOP / AspectJ.</i>]]></bottom>
+     	<link offline="true" href="http://java.sun.com/j2se/1.4.2/docs/api/" packagelistLoc="C:\tmp"/>
+		<link href="http://java.sun.com/j2se/1.4.2/docs/api/"/>
+	</javadoc>
+  </target>
+
+<!-- ==================== Aspectj All Target ====================================== -->
+  <target name="all_aj" depends="clean,compile_aj,doc,run_aj"
+   description="Clean build directory, then compile and run the AspecJ version"/>
+  
+
+<!-- ==================== AspectJ Compile Target ================================== -->
+<!--
+  The "compile_aj" target performs aspect weaving of aspects (from your "aspects" 
+  directory) with source files (from your "src" directory) and build the 
+  corresponding jar file in the appropriate location in the lib directory.
+-->
+
+  <taskdef 
+      resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">
+      <classpath>
+      	<pathelement location="${aspectj.home}/lib/aspectjtools.jar"/>
+      </classpath>    
+  </taskdef>
+  		
+  <target name="compile_aj" >
+    <mkdir    dir="${build.lib.dir}"/>
+    <iajc outjar="${app_aj.jar}">
+      <sourceroots>
+        <pathelement location="${src.dir}"/>
+        <pathelement location="${aspects.dir}"/>
+      </sourceroots>
+      <classpath>
+        <pathelement location="${aspectj.home}/lib/aspectjrt.jar"/>
+        <pathelement location="${lib.dir}/log4j.jar"/>
+      </classpath>
+    </iajc>
+  </target>
+
+<!-- ==================== AspectJ Run Target ================================== -->
+<!--
+  The "run_aj" runs the main Java program of the AspectJ version.
+-->
+
+  <target name="run_aj" depends="compile_aj"
+   description="Run the main program of the AspectJ version">
+     <java fork="true"
+		  classname="${main.prog}">  
+    	<classpath>
+        	<pathelement location="${app_aj.jar}"/>
+        	<pathelement location="${aspectj.home}/lib/aspectjrt.jar"/>
+        	<pathelement location="${lib.dir}/log4j.jar"/>
+        	<pathelement path="${config.dir}"/>
+      	</classpath>
+	</java>
+  </target>
+    
+</project>
